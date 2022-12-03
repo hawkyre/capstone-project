@@ -1,15 +1,18 @@
+
+import re
+import copy
+
 from transformers import (pipeline, AutoTokenizer,
                           BertForSequenceClassification)
-import re
 import matplotlib.pyplot as plt
 import numpy as np
-import copy
+
 
 ekman_to_feeling = {
     "anger": ["anger", "annoyance", "disapproval"],
     "disgust": ["disgust"],
     "fear": ["fear", "nervousness"],
-    "joy": ["joy", "amusement", "approval", "excitement", "gratitude",  "love", "optimism", "relief", "pride", "admiration", "desire", "caring"],
+    "happiness": ["joy", "amusement", "approval", "excitement", "gratitude",  "love", "optimism", "relief", "pride", "admiration", "desire", "caring"],
     "sadness": ["sadness", "disappointment", "embarrassment", "grief",  "remorse"],
     "surprise": ["surprise", "realization", "confusion", "curiosity"]
 }
@@ -20,18 +23,18 @@ feeling_to_ekman = {'anger': 'anger',
                     'disgust': 'disgust',
                     'fear': 'fear',
                     'nervousness': 'fear',
-                    'joy': 'joy',
-                    'amusement': 'joy',
-                    'approval': 'joy',
-                    'excitement': 'joy',
-                    'gratitude': 'joy',
-                    'love': 'joy',
-                    'optimism': 'joy',
-                    'relief': 'joy',
-                    'pride': 'joy',
-                    'admiration': 'joy',
-                    'desire': 'joy',
-                    'caring': 'joy',
+                    'joy': 'happiness',
+                    'amusement': 'happiness',
+                    'approval': 'happiness',
+                    'excitement': 'happiness',
+                    'gratitude': 'happiness',
+                    'love': 'happiness',
+                    'optimism': 'happiness',
+                    'relief': 'happiness',
+                    'pride': 'happiness',
+                    'admiration': 'happiness',
+                    'desire': 'happiness',
+                    'caring': 'happiness',
                     'sadness': 'sadness',
                     'disappointment': 'sadness',
                     'embarrassment': 'sadness',
@@ -46,7 +49,7 @@ ekman_map_base = {
     "anger": 0,
     "disgust": 0,
     "fear": 0,
-    "joy": 0,
+    "happiness": 0,
     "sadness": 0,
     "surprise": 0
 }
@@ -163,10 +166,6 @@ class TextToEmotion:
     def get_y_for_ekman(stats, given_ekman):
         return [[ekmans[ekman] for ekman in ekmans.keys() if ekman == given_ekman][0] for ekmans in (s[1] for s in stats)]
 
-    @staticmethod
-    def get_y_for_label(stats, given_label):
-        return [[label['score'] for label in labels if label.get('label') == given_label][0] for labels in (s[0] for s in stats)]
-
     def plot_feeling_from_stats(self, stats, y_min=0.05, min_y_max=0.2):
         all_labels = TextToEmotion.get_all_labels(stats)
         all_ekman = TextToEmotion.get_all_ekman(stats)
@@ -213,6 +212,8 @@ class TextToEmotion:
         stats = self.emotion_from_sentence_group(sent_group)
         self.plot_feeling_from_stats(stats)
 
+    def sentence_group_to_stats(self, sent_group):
+        return self.emotion_from_sentence_group(sent_group)
+
     def text_to_emotion(self, text):
         stats = self.emotion_from_text(text)
-        print(stats)
