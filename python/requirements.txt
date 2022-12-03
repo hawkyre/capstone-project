@@ -1,0 +1,4 @@
+transformers==4.24.0
+matplotlib==3.5.1
+torch==1.13.0
+numpy==1.23.5
