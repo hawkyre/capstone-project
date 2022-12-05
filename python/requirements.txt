@@ -11,3 +11,5 @@ opencv-contrib-python
 pandas
 tensorflow-estimator
 torchvision
+seaborn
+deepgram-sdk

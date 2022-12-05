@@ -3,7 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy 
 import math 
-
+import seaborn as sns
+import pandas as pd
 
 ekman_map_base = {
     "anger": [],
@@ -23,10 +24,12 @@ class Plotter:
 
     @staticmethod
     def image_data_to_points(image_data):
+        if len(image_data) == 0:
+            return [], []
+
         sequences = copy.deepcopy(ekman_map_base)
         x = []
         for img in image_data:
-            # print('imgimg', img)
             xi = img['x']
             x.append(xi)
             for label in img['y']:
@@ -36,9 +39,45 @@ class Plotter:
                 value = normalize(value)
                 sequences[label.lower()].append(value)
 
-        print('seq', sequences)
-        print('imgy', image_data[0]['y'])
         return x, sequences
+
+    @staticmethod
+    def plot_covariance_matrix(data):
+        number_of_samples = 100
+
+        x_group, y_group, labels = data.T
+
+        new_x = []
+        new_y = []
+
+        for i in range(len(x_group)):
+            x = np.array(x_group[i])
+            y = np.array(y_group[i])
+
+            xn = np.linspace(x.min(), x.max(), number_of_samples)
+            yn = np.interp(xn, x, y)
+
+            # if 'Face' in labels[i]:
+            #     ax.plot(xn, yn, label=labels[i])
+            #     ax.scatter(xn, yn, label=labels[i])
+
+            new_x.append(xn)
+            new_y.append(yn)
+        
+        # ax.set_title('Ekman normalized')
+        # ax.plot()
+        df = pd.DataFrame(np.array(new_y).T, columns=labels)
+        
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.add_subplot(1, 1, 1)
+        
+        image_text_corr_mat = df.corr().to_numpy()[6:12, :6]
+
+        sns.heatmap(image_text_corr_mat, vmin=-1, vmax=1, ax=ax, linewidth=.5, xticklabels=df.columns[:6], yticklabels=df.columns[6:12], cmap='RdYlGn')
+
+        # fig2 = plt.figure(figsize=(10, 8))
+        # ax2 = fig2.add_subplot(1, 1, 1)
+        # sns.heatmap(df.corr(), vmin=-1, vmax=1, ax=ax2, linewidth=.5)
 
 
     @staticmethod
@@ -84,7 +123,9 @@ class Plotter:
         ax_img.set_prop_cycle(
             'color', [cm(1.*i/len(to_plot_img)) for i in range(len(to_plot_img))])
 
-        # print(to_plot_general)
+        zipped_plots = np.array(to_plot_ekman + to_plot_img)
+        # print(zipped_plots)
+        Plotter.plot_covariance_matrix(zipped_plots)
 
         for (x, y, label) in to_plot_general:
             ax_text_all.plot(x, y, label=label)

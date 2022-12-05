@@ -79,8 +79,8 @@ class FacialEmotionRecognition:
 
     def predict_frame(self, frame=None, heat_map=False):
 
-        scores = []
-        predicted_class = []
+        scores = [-1000, -1000,  -1000, -1000,  -1000,  -1000,  -1000]
+        predicted_class = None
 
         # Comprobar si hay frame
         if frame is not None:
