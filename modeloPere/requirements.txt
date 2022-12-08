@@ -1,0 +1,4 @@
+# Only runs on python 3.9 or lower for some reason, so no 3.10
+
+gensim
+nltk
