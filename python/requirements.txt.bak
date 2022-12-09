@@ -1,0 +1,15 @@
+transformers==4.24.0
+matplotlib==3.5.1
+torch==1.13.0
+numpy==1.23.5
+emotion_recognition==1.0.2
+tensorflow-gpu==2.10.1
+grad_cam==1.4.6
+timm
+opencv-python
+opencv-contrib-python
+pandas
+tensorflow-estimator
+torchvision
+seaborn
+deepgram-sdk

@@ -13,3 +13,5 @@ tensorflow-estimator
 torchvision
 seaborn
 deepgram-sdk
+gensim
+nltk

@@ -152,7 +152,7 @@ class TextToEmotion:
 
     @staticmethod
     def get_y_for_label(stats, given_label):
-        return [[label['score'] for label in labels if label.get('label') == given_label][0] for labels in (s[0] for s in stats)]
+        return [[sample['score'] for sample in labels if sample.get('label') == given_label][0] for labels in (s[0] for s in stats)]
 
     @staticmethod
     def get_all_ekman(stats):

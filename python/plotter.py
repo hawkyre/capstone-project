@@ -5,6 +5,7 @@ import copy
 import math 
 import seaborn as sns
 import pandas as pd
+from utils import normalize_x
 
 ekman_map_base = {
     "anger": [],
@@ -43,30 +44,13 @@ class Plotter:
 
     @staticmethod
     def plot_covariance_matrix(data):
-        number_of_samples = 100
 
-        x_group, y_group, labels = data.T
+        labels = list(map(lambda point: point['label'], data))
+        y = list(map(lambda point: point['y'], data))
 
-        new_x = []
-        new_y = []
-
-        for i in range(len(x_group)):
-            x = np.array(x_group[i])
-            y = np.array(y_group[i])
-
-            xn = np.linspace(x.min(), x.max(), number_of_samples)
-            yn = np.interp(xn, x, y)
-
-            # if 'Face' in labels[i]:
-            #     ax.plot(xn, yn, label=labels[i])
-            #     ax.scatter(xn, yn, label=labels[i])
-
-            new_x.append(xn)
-            new_y.append(yn)
-        
         # ax.set_title('Ekman normalized')
         # ax.plot()
-        df = pd.DataFrame(np.array(new_y).T, columns=labels)
+        df = pd.DataFrame(np.array(y).T, columns=labels)
         
         fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(1, 1, 1)
@@ -79,78 +63,210 @@ class Plotter:
         # ax2 = fig2.add_subplot(1, 1, 1)
         # sns.heatmap(df.corr(), vmin=-1, vmax=1, ax=ax2, linewidth=.5)
 
-
     @staticmethod
-    def plot_data(image_data, text_emotion_data):
-
-        all_labels = TextToEmotion.get_all_labels(text_emotion_data)
-        all_ekman = TextToEmotion.get_all_ekman(text_emotion_data)
-
-        x = np.array([s[2] for s in text_emotion_data])
-
-        # cm = plt.get_cmap('gist_rainbow')
-        cm = plt.get_cmap('Paired')
-        fig = plt.figure(figsize=(12, 15))
-        ax_text_all = fig.add_subplot(3, 1, 1)
-        ax_text_ekman = fig.add_subplot(3, 1, 2)
-        ax_img = fig.add_subplot(3, 1, 3)
-
-
-        to_plot_general = []
-        to_plot_ekman = []
-        to_plot_img = []
-
-        for label in all_labels:
-            y = np.array(TextToEmotion.get_y_for_label(text_emotion_data, label))
-            if np.quantile(y, 0.95) > 0.05 or np.max(y) > 0.2:
-                to_plot_general.append((x, y, 'Text / ' + label))
-
-        for ekman in all_ekman:
-            y = np.array(TextToEmotion.get_y_for_ekman(text_emotion_data, ekman))
-            to_plot_ekman.append((x, y, 'Text / ' + ekman))
-
+    def normalize_image_data(image_data):
+        image_data_normalized = []
         image_x, image_ys = Plotter.image_data_to_points(image_data)
 
         for y_label in image_ys:
-            to_plot_img.append((image_x, image_ys[y_label], 'Face / ' + y_label))
+            x = image_x
+            y = image_ys[y_label]
+            x, y = normalize_x(x, y)
 
-        ax_text_all.set_prop_cycle('color', [cm(1.*i/len(to_plot_general))
-                          for i in range(len(to_plot_general))])
+            info_type = 'face'
+            subtopic = y_label
+            label = 'Face / ' + y_label
 
-        ax_text_ekman.set_prop_cycle(
-            'color', [cm(1.*i/len(to_plot_ekman)) for i in range(len(to_plot_ekman))])
+            point = {
+                'x': x.tolist(),
+                'y': y.tolist(),
+                'info_type': info_type,
+                'subtopic': subtopic,
+                'label': label
+            }
 
-        ax_img.set_prop_cycle(
-            'color', [cm(1.*i/len(to_plot_img)) for i in range(len(to_plot_img))])
+            image_data_normalized.append(point)
+        
+        return image_data_normalized
 
-        zipped_plots = np.array(to_plot_ekman + to_plot_img)
-        # print(zipped_plots)
+    @staticmethod
+    def normalize_context_data(context_data):
+        context_data_normalized = []
+        all_labels = [x[0] for x in context_data[0][0]]
+
+        context_map = {}
+        x_series = []
+
+        for context_values, x in context_data:
+            x_series.append(x)
+            for context, score in context_values:
+                if not context_map.get(context):
+                    context_map.setdefault(context, [score])
+                else:
+                    context_map[context].append(score)
+        
+        for label in all_labels:
+            y_series = context_map[label]
+            x, y = normalize_x(x_series, y_series)
+
+            info_type = 'context'
+            subtopic = label
+            label = 'Context / ' + label
+
+            point = {
+                'x': x.tolist(),
+                'y': y.tolist(),
+                'info_type': info_type,
+                'subtopic': subtopic,
+                'label': label
+            }
+
+            context_data_normalized.append(point)
+        
+        context_data_normalized = sorted(context_data_normalized, key=lambda x: np.sum(np.array(x['y'])**2), reverse=True)
+        return context_data_normalized[:8]
+
+    @staticmethod
+    def normalize_text_emotion_data(text_emotion_data):
+        text_emotion_data_normalized = []
+        
+        all_labels = TextToEmotion.get_all_labels(text_emotion_data)
+        all_ekman = TextToEmotion.get_all_ekman(text_emotion_data)
+        
+        x = np.array([s[2] for s in text_emotion_data])
+
+        for label in all_labels:
+            y = np.array(TextToEmotion.get_y_for_label(text_emotion_data, label))
+
+            info_type = 'text'
+            subtopic = label
+            label = 'Text emotion / ' + label
+
+
+            if np.quantile(y, 0.95) > 0.05 or np.max(y) > 0.2:
+                x_norm, y_norm = normalize_x(x, y)
+                point = {
+                    'x': x_norm.tolist(),
+                    'y': y_norm.tolist(),
+                    'info_type': info_type,
+                    'subtopic': subtopic,
+                    'label': label
+                }
+                text_emotion_data_normalized.append(point)
+
+        for ekman_label in all_ekman:
+            y = np.array(TextToEmotion.get_y_for_ekman(text_emotion_data, ekman_label))
+
+            info_type = 'text_ekman'
+            subtopic = ekman_label
+            ekman_label = 'Text emotion (Ekman) / ' + ekman_label
+
+
+            if np.quantile(y, 0.95) > 0.05 or np.max(y) > 0.2:
+                x_norm, y_norm = normalize_x(x, y)
+                point = {
+                    'x': x_norm.tolist(),
+                    'y': y_norm.tolist(),
+                    'info_type': info_type,
+                    'subtopic': subtopic,
+                    'label': ekman_label
+                }
+                text_emotion_data_normalized.append(point)
+        
+        return text_emotion_data_normalized
+
+    @staticmethod
+    def draw_plot(points, title):
+        cm = plt.get_cmap('Paired')
+        fig = plt.figure(figsize=(15, 4))
+        axis = fig.add_subplot(1, 1, 1)
+
+        axis.set_prop_cycle('color', [cm(1.*i/len(points))
+                          for i in range(len(points))])
+
+        for point in points:
+            x = point['x']
+            y = point['y']
+            label = point['label']
+            axis.plot(x, y, label=label)
+
+        axis.set_xlabel('Minutes')
+        axis.set_ylabel('Intensity')
+        axis.set_title(title)
+        axis.legend(loc=(1.04, 0))
+
+    @staticmethod
+    def parse_data(image_data, text_emotion_data, text_context_scores):
+        text_all_points = Plotter.normalize_text_emotion_data(text_emotion_data)
+        img_points = Plotter.normalize_image_data(image_data)
+        context_points = Plotter.normalize_context_data(text_context_scores)
+
+        all_data = text_all_points + img_points + context_points
+
+        return { 'time_series': all_data }
+
+    @staticmethod
+    def plot_data(image_data, text_emotion_data, text_context_scores):
+        text_all_points = Plotter.normalize_text_emotion_data(text_emotion_data)
+        text_general_points = list(filter(lambda x: x['info_type'] == 'text', text_all_points))
+        text_ekman_points = list(filter(lambda x: x['info_type'] == 'text_ekman', text_all_points))
+        
+        img_points = Plotter.normalize_image_data(image_data)
+        
+        context_points = Plotter.normalize_context_data(text_context_scores)
+
+        Plotter.draw_plot(text_general_points, 'Text to Emotion time series')
+        Plotter.draw_plot(text_ekman_points, 'Text to Ekman Emotion time series')
+        Plotter.draw_plot(img_points, 'Image to Emotion time series')
+        Plotter.draw_plot(context_points, 'Text to Context time series')
+
+        # ax_text_all.set_prop_cycle('color', [cm(1.*i/len(text_general_points))
+        #                   for i in range(len(text_general_points))])
+
+        # ax_text_ekman.set_prop_cycle(
+        #     'color', [cm(1.*i/len(text_ekman_points)) for i in range(len(text_ekman_points))])
+
+        # ax_img.set_prop_cycle(
+        #     'color', [cm(1.*i/len(img_points)) for i in range(len(img_points))])
+
+        # ax_ctx.set_prop_cycle(
+        #     'color', [cm(1.*i/len(img_points)) for i in range(len(img_points))])
+
+        zipped_plots = np.array(text_ekman_points + img_points)
         Plotter.plot_covariance_matrix(zipped_plots)
 
-        for (x, y, label) in to_plot_general:
-            ax_text_all.plot(x, y, label=label)
+        # for point in text_general_points:
+        #     x = point['x']
+        #     y = point['y']
+        #     label = point['label']
+        #     ax_text_all.plot(x, y, label=label)
 
-        for (x, y, label) in to_plot_ekman:
-            ax_text_ekman.plot(x, y, label=label)
+        # for point in text_ekman_points:
+        #     x = point['x']
+        #     y = point['y']
+        #     label = point['label']
+        #     ax_text_ekman.plot(x, y, label=label)        
         
-        
-        for (x, y, label) in to_plot_img:
-            ax_img.plot(x, y, label=label)
+        # for point in img_points:
+        #     x = point['x']
+        #     y = point['y']
+        #     label = point['label']
+        #     ax_img.plot(x, y, label=label)
 
-        ax_text_all.set_xlabel('Minutes')
-        ax_text_all.set_ylabel('Intensity')
-        ax_text_all.set_title('Text to emotion plot')
-        ax_text_all.legend(loc=(1.04, 0))
+        # ax_text_all.set_xlabel('Minutes')
+        # ax_text_all.set_ylabel('Intensity')
+        # ax_text_all.set_title('Text to emotion plot')
+        # ax_text_all.legend(loc=(1.04, 0))
 
-        ax_text_ekman.set_xlabel('Minutes')
-        ax_text_ekman.set_ylabel('Intensity')
-        ax_text_ekman.set_title('Text to ekman emotion plot')
-        ax_text_ekman.legend(loc=(1.04, 0))
+        # ax_text_ekman.set_xlabel('Minutes')
+        # ax_text_ekman.set_ylabel('Intensity')
+        # ax_text_ekman.set_title('Text to ekman emotion plot')
+        # ax_text_ekman.legend(loc=(1.04, 0))
 
-        ax_img.set_xlabel('Minutes')
-        ax_img.set_ylabel('Intensity')
-        ax_img.set_title('Image to emotion plot')
-        ax_img.legend(loc=(1.04, 0))
+        # ax_img.set_xlabel('Minutes')
+        # ax_img.set_ylabel('Intensity')
+        # ax_img.set_title('Image to emotion plot')
+        # ax_img.legend(loc=(1.04, 0))
 
 
     

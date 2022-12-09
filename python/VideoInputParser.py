@@ -8,6 +8,7 @@ import math
 from ImagesEmotionLucas.scripts.frames_processing import ImageToEmotion
 from plotter import Plotter
 from text_to_emotion import TextToEmotion
+from TextToContext import TextToContext
 import tempfile
 import os
 
@@ -20,25 +21,94 @@ class VideoInputParser():
         self.deepgram_client = Deepgram(DEEPGRAM_API_KEY)
         self.tte = TextToEmotion()
         self.ite = ImageToEmotion()
+        self.ttc = TextToContext()
 
     def parse_video(self, video_bytes):
+        with tempfile.NamedTemporaryFile(dir="temp_vids", delete=False, mode="w+b") as temp:
+            print("Temp write")
+            temp.write(video_bytes)
+            temp.close()
+
+            video_path = temp.name
+
+            print("Temp write end at {}".format(video_path))
+            return self.parse_video_from_path(video_path)
+
+            # f = open('test_data/sample_response.json')
+            # json_doc = json.load(f)
+
+            # json_transcript = self._video_to_text(video_path)
+            # # json_transcript = json_doc
+            # sentences = self._process_transcript(json_transcript)
+            # text_emotion_scores = self.tte.sentence_group_to_stats(sentences)
+            # text_context_scores = self._detect_context(sentences)
+
+            # images = self._extract_images_from_video(video_path)
+            # parsed_images = self._parse_images(images)
+
+            # data = Plotter.parse_data(
+            #     parsed_images, text_emotion_scores, text_context_scores)
+
+            # os.unlink(video_path)
+
+            # return data
+
+    def parse_video_from_path(self, video_path):
+        f = open('test_data/sample_response.json')
+        json_doc = json.load(f)
+
+        # json_transcript = self._video_to_text(video_path)
+        json_transcript = json_doc
+        sentences = self._process_transcript(json_transcript)
+        text_emotion_scores = self.tte.sentence_group_to_stats(sentences)
+        text_context_scores = self._detect_context(sentences)
+
+        images = self._extract_images_from_video(video_path)
+        parsed_images = self._parse_images(images)
+
+        data = Plotter.parse_data(
+            parsed_images, text_emotion_scores, text_context_scores)
+
+        os.unlink(video_path)
+
+        return data
+
+    def parse_and_plot_video(self, video_bytes):
         with tempfile.NamedTemporaryFile(dir="temp_vids", delete=False) as temp:
             temp.write(video_bytes)
             temp.close()
 
             video_path = temp.name
 
+            f = open('test_data/sample_response.json')
+            json_doc = json.load(f)
+
             images = self._extract_images_from_video(video_path)
             parsed_images = self._parse_images(images)
 
-            json_transcript = self._video_to_text(video_path)
-            # json_transcript = json_doc
+            # json_transcript = self._video_to_text(video_path)
+            json_transcript = json_doc
             sentences = self._process_transcript(json_transcript)
             text_emotion_scores = self.tte.sentence_group_to_stats(sentences)
+            text_context_scores = self._detect_context(sentences)
 
-            Plotter.plot_data(parsed_images, text_emotion_scores)
+            Plotter.plot_data(
+                parsed_images, text_emotion_scores, text_context_scores)
 
             os.unlink(video_path)
+
+    def _detect_context(self, sentence_data):
+
+        context = [self.ttc.predict(sentence)
+                   for sentence, start, end in sentence_data]
+        # for sentence, start, end in sentence_data:
+        #     context = self.ttc.predict(sentence)
+        #     print(context)
+
+        x_offset = [(end+start)/2.0 for (_sentence, start, end)
+                    in sentence_data]
+
+        return list(zip(context, x_offset))
 
     def _extract_images_from_video(self, video_path, images_per_second=0.8):
         video = cv2.VideoCapture(video_path)
@@ -71,8 +141,8 @@ class VideoInputParser():
             scores, max_label = self.ite.process_image(img)
             images_parsed.append(
                 {'x': timestamp, 'y': scores, 'image_index': index})
-            print("Parsed image {}".format(index))
             index += 1
+            print("Parsed image {}/{}".format(index, len(images)))
 
         return images_parsed
 
@@ -129,13 +199,8 @@ class VideoInputParser():
                        "language": "en-US", "tier": "enhanced", "diarize": True}
 
             print('Requesting transcript...')
-            print('Your file may take up to a couple minutes to process.')
-            print(
-                'While you wait, did you know that Deepgram accepts over 40 audio file formats? Even MP4s.')
-            print(
-                'To learn more about customizing your transcripts check out developers.deepgram.com')
-
-            response = self.deepgram_client.transcription.sync_prerecorded(source, options)
+            response = self.deepgram_client.transcription.sync_prerecorded(
+                source, options)
             # print(json.dumps(response, indent=4))
             print('Transcript obtained.')
             return response
