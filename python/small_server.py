@@ -9,10 +9,22 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == '/api/analyze-video':
             try:
-                # Parse the video file from the POST request
-                # video_file = self.rfile.read(
-                #     int(self.headers['Content-Length']))
-                # video_bytes = bytearray(video_file)
+                # f = open("example_res.json", "r")
+                # result = f.readlines()
+                # print(result)
+                # f.close()
+
+                f = open("example_res.json", "r")
+                json_str = f.read()
+
+                # json_str = json.dumps(result)
+
+                # self.send_response(200)
+                # self.send_header('Content-type', 'application/json')
+                # self.send_header('Access-Control-Allow-Origin', '*')
+                # self.end_headers()
+                # self.wfile.write(bytes(result, 'utf-8'))
+                # return
 
                 # Parse the request data using cgi.FieldStorage
                 form = cgi.FieldStorage(
@@ -31,8 +43,14 @@ class RequestHandler(BaseHTTPRequestHandler):
                 vip = VideoInputParser()
                 result = vip.parse_video(video_bytes)
 
+                # print(result)
+
                 # Convert the result to a JSON string
                 json_str = json.dumps(result)
+
+                # f = open("example_res.json", "a")
+                # f.write(json_str)
+                # f.close()
 
                 # Return a 200 status code and the result as a JSON object
                 self.send_response(200)
@@ -41,7 +59,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(bytes(json_str, 'utf-8'))
             except Exception as e:
-                print('except', e)
+                print('excepttion: ', e)
                 # If the parse function throws an error, return a 400 status code
                 self.send_response(400)
         else:

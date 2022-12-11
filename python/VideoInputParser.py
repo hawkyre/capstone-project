@@ -57,8 +57,8 @@ class VideoInputParser():
         f = open('test_data/sample_response.json')
         json_doc = json.load(f)
 
-        # json_transcript = self._video_to_text(video_path)
-        json_transcript = json_doc
+        json_transcript = self._video_to_text(video_path)
+        # json_transcript = json_doc
         sentences = self._process_transcript(json_transcript)
         text_emotion_scores = self.tte.sentence_group_to_stats(sentences)
         text_context_scores = self._detect_context(sentences)

@@ -6,6 +6,7 @@ import math
 import seaborn as sns
 import pandas as pd
 from utils import normalize_x
+from time_series_detection import detect_significant_trends
 
 ekman_map_base = {
     "anger": [],
@@ -201,9 +202,21 @@ class Plotter:
         img_points = Plotter.normalize_image_data(image_data)
         context_points = Plotter.normalize_context_data(text_context_scores)
 
-        all_data = text_all_points + img_points + context_points
+        ekman_data = list(filter(lambda x: x['info_type'] == 'text_ekman', text_all_points))
 
-        return { 'time_series': all_data }
+        # happiness_trend = detect_significant_trends(happy['y'], happy['x'][1] - happy['x'][0])
+        # print('happiness trend: ', happiness_trend)
+
+        all_data = text_all_points + img_points + context_points
+        all_trends = {}
+
+        for ekman_sample in ekman_data:
+            print('-'*30)
+            print(ekman_sample['label'])
+            trends = detect_significant_trends(ekman_sample['y'], ekman_sample['x'][1] - ekman_sample['x'][0])
+            all_trends.setdefault(ekman_sample['label'], trends)
+
+        return { 'time_series': all_data, 'trends': all_trends }
 
     @staticmethod
     def plot_data(image_data, text_emotion_data, text_context_scores):
