@@ -9,22 +9,8 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == '/api/analyze-video':
             try:
-                # f = open("example_res.json", "r")
-                # result = f.readlines()
-                # print(result)
-                # f.close()
-
                 f = open("example_res.json", "r")
                 json_str = f.read()
-
-                # json_str = json.dumps(result)
-
-                # self.send_response(200)
-                # self.send_header('Content-type', 'application/json')
-                # self.send_header('Access-Control-Allow-Origin', '*')
-                # self.end_headers()
-                # self.wfile.write(bytes(result, 'utf-8'))
-                # return
 
                 # Parse the request data using cgi.FieldStorage
                 form = cgi.FieldStorage(
@@ -43,14 +29,12 @@ class RequestHandler(BaseHTTPRequestHandler):
                 vip = VideoInputParser()
                 result = vip.parse_video(video_bytes)
 
-                # print(result)
-
                 # Convert the result to a JSON string
                 json_str = json.dumps(result)
 
-                # f = open("example_res.json", "a")
-                # f.write(json_str)
-                # f.close()
+                f = open("ludwig_res.json", "a")
+                f.write(json_str)
+                f.close()
 
                 # Return a 200 status code and the result as a JSON object
                 self.send_response(200)

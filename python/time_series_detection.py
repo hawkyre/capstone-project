@@ -1,12 +1,12 @@
 import numpy as np
 
 
-def detect_significant_trends(points, x_scale=1):
+def detect_significant_trends(points, x_scale=1.0):
     points = np.array(points)
     points_dif = points[1:] - points[:-1]
     all_best = {}
 
-    min_trend_size = len(points) // 15
+    min_trend_size = int(np.floor((len(points) // 40) // x_scale))
 
     for i in range(len(points_dif)):
         # cp = points_dif[i]
@@ -15,10 +15,11 @@ def detect_significant_trends(points, x_scale=1):
             # next_p = points_dif[j]
             point_range = points_dif[i:(j+1)]
             slope = np.mean(point_range) / x_scale
+            # slope = (points[j+1] - points[i]) / x_scale
             std = np.std(point_range)
             # corr = np.corrcoef(point_range)
             interval_length = (j-i+1) * x_scale
-            score = std/(interval_length ** 1.2)
+            score = std/(interval_length ** 1)
 
             if score < best[-1]:
                 best = (std, slope, i, j, score)
@@ -106,7 +107,7 @@ def detect_significant_trends(points, x_scale=1):
                         f0, j1), 'metric': new_score, 'std': new_std}
 
                     overlap_interval = itv
-                else:
+                elif (ci['slope'] > 0.0) == (cj['slope'] > 0.0):
                     candidates_merged[j] = True
                     if j == i+1 and cj['metric'] < ci['metric']:
                         overlap_interval = cj
@@ -120,9 +121,17 @@ def detect_significant_trends(points, x_scale=1):
 
         final_intervals.append(overlap_interval)
 
-    print('final', final_intervals)
+    final_intervals = list(
+        filter(
+            lambda x: abs(x['slope']) > 0.001,
+            final_intervals
+        )
+    )
 
     final_intervals = sorted(
         final_intervals, key=lambda x: abs(x['interval'][1] - x['interval'][0]), reverse=True)
 
-    return final_intervals[:10]
+    print('final', final_intervals)
+
+    # return final_intervals[:10]
+    return final_intervals

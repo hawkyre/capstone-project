@@ -65,14 +65,48 @@ class Plotter:
         # sns.heatmap(df.corr(), vmin=-1, vmax=1, ax=ax2, linewidth=.5)
 
     @staticmethod
+    def create_correlation_matrix(rows, cols, title, selector):
+        
+        sample = cols + rows
+
+        labels = list(map(lambda sample: sample['label'], sample))
+        y = list(map(lambda sample: sample['y'], sample))
+
+        df = pd.DataFrame(np.array(y).T, columns=labels)
+                
+        corr_mat = df.corr().to_numpy()[len(cols):, :len(cols)]
+        print("Corre mat:\n {}".format(corr_mat))
+
+        return {
+            'selector': selector,
+            'title': title,
+            'corr_mat': corr_mat.tolist(),
+            'row_labels': list(map(lambda r: r['label'], rows)),
+            'col_labels': list(map(lambda r: r['label'], cols))
+        }
+
+        # sns.heatmap(image_text_corr_mat, vmin=-1, vmax=1, ax=ax, linewidth=.5, xticklabels=df.columns[:6], yticklabels=df.columns[6:12], cmap='RdYlGn')
+
+        # fig2 = plt.figure(figsize=(10, 8))
+        # ax2 = fig2.add_subplot(1, 1, 1)
+        # sns.heatmap(df.corr(), vmin=-1, vmax=1, ax=ax2, linewidth=.5)
+
+    @staticmethod
     def normalize_image_data(image_data):
         image_data_normalized = []
+
+        kernel = np.array([1, 2, 5, 10, 20, 30, 20, 10, 5, 2, 1])
+        kernel = kernel / np.sum(kernel)
+        kernel = kernel * 1.25
+        
         image_x, image_ys = Plotter.image_data_to_points(image_data)
 
         for y_label in image_ys:
             x = image_x
             y = image_ys[y_label]
+            y = np.convolve(y, kernel, 'same')
             x, y = normalize_x(x, y)
+            
 
             info_type = 'face'
             subtopic = y_label
@@ -215,8 +249,12 @@ class Plotter:
             print(ekman_sample['label'])
             trends = detect_significant_trends(ekman_sample['y'], ekman_sample['x'][1] - ekman_sample['x'][0])
             all_trends.setdefault(ekman_sample['label'], trends)
+        
+        text_img_corr_map = Plotter.create_correlation_matrix(ekman_data, img_points, "Correlation between text emotion and facial emotion.", "Text / Face")
+        text_context_corr_map = Plotter.create_correlation_matrix(ekman_data, context_points, "Correlation between text emotion and context.", "Text / Context")
+        img_context_corr_map = Plotter.create_correlation_matrix(img_points, context_points, "Correlation between facial emotion and context.", "Face / Context")
 
-        return { 'time_series': all_data, 'trends': all_trends }
+        return { 'time_series': all_data, 'trends': all_trends, 'correlations': [text_img_corr_map, text_context_corr_map, img_context_corr_map] }
 
     @staticmethod
     def plot_data(image_data, text_emotion_data, text_context_scores):

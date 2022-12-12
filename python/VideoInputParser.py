@@ -11,6 +11,7 @@ from text_to_emotion import TextToEmotion
 from TextToContext import TextToContext
 import tempfile
 import os
+from multiprocessing import Process
 
 DEEPGRAM_API_KEY = '4d7ae42383509c771f0de389b766ffbb2f794ca8'
 sentence_regex = re.compile(r'((?<=[.?!]")|((?<=[.?!])(?!")))\s*')
@@ -56,9 +57,9 @@ class VideoInputParser():
     def parse_video_from_path(self, video_path):
         f = open('test_data/sample_response.json')
         json_doc = json.load(f)
+        json_transcript = json_doc
 
-        json_transcript = self._video_to_text(video_path)
-        # json_transcript = json_doc
+        # json_transcript = self._video_to_text(video_path)
         sentences = self._process_transcript(json_transcript)
         text_emotion_scores = self.tte.sentence_group_to_stats(sentences)
         text_context_scores = self._detect_context(sentences)
