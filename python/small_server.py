@@ -9,8 +9,8 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == '/api/analyze-video':
             try:
-                f = open("example_res.json", "r")
-                json_str = f.read()
+                # f = open("antoniop_res.json", "r")
+                # json_str = f.read()
 
                 # Parse the request data using cgi.FieldStorage
                 form = cgi.FieldStorage(

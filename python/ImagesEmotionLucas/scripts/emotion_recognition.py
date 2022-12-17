@@ -100,52 +100,61 @@ class FacialEmotionRecognition:
             if bounding_boxes.any():
 
                 for bbox, p in zip(bounding_boxes, points):
-                    box = bbox.astype(np.int)
-                    x1, y1, x2, y2 = box[0:4]
-                    face_img = frame[y1:y2, x1:x2, :]
+                    try:
+                        box = bbox.astype(np.int)
+                        x1, y1, x2, y2 = box[0:4]
 
-                    img_tensor = self.image_to_tensor_transform(
-                        Image.fromarray(face_img))
-                    img_tensor.unsqueeze_(0)
-                    scores = self.model(img_tensor.to(self.device))
-                    scores = scores[0].data.cpu().numpy()
-                    predicted_class = self.idx_to_class[np.argmax(scores)]
+                        # x1 = max(x1, 0)
+                        # y1 = max(y1, 0)
+                        # x2 = min(x2, self.IMG_SIZE)
+                        # y2 = min(y2, self.IMG_SIZE)
 
-                    # plt.figure(figsize=(3, 3))
-                    plt.axis('off')
-                    plt.imshow(frame)
-                    # plt.title(predicted_class)
-                    # print("Scores cara {}: ".format(cont_faces), scores)
-                    # print("Predicted class: ", predicted_class)
+                        face_img = frame[y1:y2, x1:x2, :]
 
-                    cont_faces = cont_faces+1
+                        img_tensor = self.image_to_tensor_transform(
+                            Image.fromarray(face_img))
+                        img_tensor.unsqueeze_(0)
+                        scores = self.model(img_tensor.to(self.device))
+                        scores = scores[0].data.cpu().numpy()
+                        predicted_class = self.idx_to_class[np.argmax(scores)]
 
-                    # Para ver el mapa de calor
-                    if heat_map == True:
+                        # plt.figure(figsize=(3, 3))
+                        # plt.axis('off')
+                        # plt.imshow(frame)
+                        # plt.title(predicted_class)
+                        # print("Scores cara {}: ".format(cont_faces), scores)
+                        # print("Predicted class: ", predicted_class)
 
-                        # Para ver el mapa de calor (GradCAM), que ayuda a detectar las regiones
-                        # consideradas importantes por la red neuronal para realizar la predicción
+                        cont_faces = cont_faces+1
 
-                        target_layers = [self.model.blocks[-1][-1]]
-                        # Construct the CAM object once, and then re-use it on many images:
-                        cam = GradCAM(
-                            model=self.model, target_layers=target_layers, use_cuda=self.use_cuda)
+                        # Para ver el mapa de calor
+                        if heat_map == True:
 
-                        grayscale_cam = cam(input_tensor=img_tensor)
-                        grayscale_cam = grayscale_cam[0, :]
-                        face_img = cv2.resize(
-                            face_img, (self.IMG_SIZE, self.IMG_SIZE))
-                        rgb_img = np.float32(face_img) / 255
-                        visualization = show_cam_on_image(
-                            rgb_img, grayscale_cam, use_rgb=True)
+                            # Para ver el mapa de calor (GradCAM), que ayuda a detectar las regiones
+                            # consideradas importantes por la red neuronal para realizar la predicción
 
-                        plt.figure(figsize=(3, 3))
-                        plt.axis('off')
-                        plt.imshow(visualization)
-                        plt.title(predicted_class)
-                        plt.show()
+                            target_layers = [self.model.blocks[-1][-1]]
+                            # Construct the CAM object once, and then re-use it on many images:
+                            cam = GradCAM(
+                                model=self.model, target_layers=target_layers, use_cuda=self.use_cuda)
 
-            # Si no hay caras
+                            grayscale_cam = cam(input_tensor=img_tensor)
+                            grayscale_cam = grayscale_cam[0, :]
+                            face_img = cv2.resize(
+                                face_img, (self.IMG_SIZE, self.IMG_SIZE))
+                            rgb_img = np.float32(face_img) / 255
+                            visualization = show_cam_on_image(
+                                rgb_img, grayscale_cam, use_rgb=True)
+
+                            plt.figure(figsize=(3, 3))
+                            plt.axis('off')
+                            plt.imshow(visualization)
+                            plt.title(predicted_class)
+                            # plt.show()
+
+                    except:
+                        print("There was a bounding frame error - skipping frame")
+                        # Si no hay caras
             else:
                 print("There are no faces!")
 

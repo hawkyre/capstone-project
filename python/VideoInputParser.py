@@ -55,11 +55,11 @@ class VideoInputParser():
             # return data
 
     def parse_video_from_path(self, video_path):
-        f = open('test_data/sample_response.json')
-        json_doc = json.load(f)
-        json_transcript = json_doc
+        # f = open('test_data/sample_response.json')
+        # json_doc = json.load(f)
+        # json_transcript = json_doc
 
-        # json_transcript = self._video_to_text(video_path)
+        json_transcript = self._video_to_text(video_path)
         sentences = self._process_transcript(json_transcript)
         text_emotion_scores = self.tte.sentence_group_to_stats(sentences)
         text_context_scores = self._detect_context(sentences)
@@ -149,7 +149,10 @@ class VideoInputParser():
 
     def _process_transcript(self, json):
         transcript_data = json['results']['channels'][0]['alternatives'][0]
+
         transcript = transcript_data['transcript']
+        print("Transcript: {}".format(transcript))
+
         words = transcript_data['words']
         sentences = self._separate_sentences(transcript)
         sentences = self._timestamp_sentences(sentences, words)
